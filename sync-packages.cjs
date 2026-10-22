@@ -84,7 +84,7 @@ const desktopPackageFolder = 'C:\\Users\\Xeon\\Desktop\\echo.powerpoint-theme-pa
 if (fs.existsSync(desktopPackageFolder)) fs.rmSync(desktopPackageFolder, { recursive: true, force: true });
 copyDirRecursive(contentDir, desktopPackageFolder);
 
-const desktopZip = 'C:\\Users\\Xeon\\Desktop\\echo.powerpoint-theme-1.4.0.zip';
+const desktopZip = 'C:\\Users\\Xeon\\Desktop\\echo.powerpoint-theme-1.4.1.zip';
 const desktopZipOld = 'C:\\Users\\Xeon\\Desktop\\echo.powerpoint-theme-1.0.0.zip';
 if (fs.existsSync(desktopZip)) fs.unlinkSync(desktopZip);
 execSync(`powershell -NoProfile -Command "Compress-Archive -Path '${contentDir}\\*' -DestinationPath '${desktopZip}' -Force"`);

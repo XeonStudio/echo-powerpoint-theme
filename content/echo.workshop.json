@@ -15,7 +15,7 @@
     {
       "path": "echo.mod.json",
       "size": 218,
-      "sha256": "8aadbccada77e7b78b9a2c685e1ce81e0e3119c96f0b49d00db8d365a351020a"
+      "sha256": "7725c3319b2f59994e1209f8909234fd5b5154f440c68802e35be759a0dd2adf"
     },
     {
       "path": "mod.js",
@@ -34,8 +34,8 @@
     },
     {
       "path": "ui/app.js",
-      "size": 234834,
-      "sha256": "4b57eaa4dd2f79104bf29b9d41688d127ec42a8f61751c6efbf3e3ee39274ecd"
+      "size": 235115,
+      "sha256": "973a148ec80025f410d24d0365edc037f00c9766189b5298bd248abf3d70990d"
     },
     {
       "path": "ui/index.html",

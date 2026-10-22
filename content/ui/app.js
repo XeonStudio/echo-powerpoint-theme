@@ -3353,9 +3353,9 @@
     if (els.btnQaSlideshow) els.btnQaSlideshow.addEventListener('click', () => toggleSlideshow());
     if (els.btnFullscreenShow) els.btnFullscreenShow.addEventListener('click', () => toggleSlideshow());
     if (els.btnViewSlideshow) els.btnViewSlideshow.addEventListener('click', () => toggleSlideshow());
-    if (els.btnHudPrev) els.btnHudPrev.addEventListener('click', handlePrev);
-    if (els.btnHudPlay) els.btnHudPlay.addEventListener('click', handlePlayPause);
-    if (els.btnHudNext) els.btnHudNext.addEventListener('click', handleNext);
+    if (els.btnHudPrev) els.btnHudPrev.addEventListener('click', () => handlePrev());
+    if (els.btnHudPlay) els.btnHudPlay.addEventListener('click', () => handlePlayPause());
+    if (els.btnHudNext) els.btnHudNext.addEventListener('click', () => handleNext());
     if (els.btnHudExit) els.btnHudExit.addEventListener('click', () => toggleSlideshow(false));
 
     // 3. Home Panel Controls
@@ -4455,11 +4455,11 @@
 
   // --- Bootstrap ---
   function init() {
-    setupListeners();
-    initSearch();
-    initRibbonTabs();
-    initSystemFonts();
     initMessageDispatcher();
+    try { setupListeners(); } catch (e) { console.error('setupListeners error:', e); }
+    try { initSearch(); } catch (e) { console.error('initSearch error:', e); }
+    try { initRibbonTabs(); } catch (e) { console.error('initRibbonTabs error:', e); }
+    try { initSystemFonts(); } catch (e) { console.error('initSystemFonts error:', e); }
 
     // 1. Synchronous Cache Restore
     loadAndApplyPresetSettings();

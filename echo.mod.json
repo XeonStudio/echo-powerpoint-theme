@@ -1,7 +1,7 @@
 {
   "id": "echo.powerpoint-theme",
   "name": "Microsoft PowerPoint · Presentation Skin",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Microsoft PowerPoint 演示文稿风格歌词与播放器界面",
   "entry": "mod.js"
 }

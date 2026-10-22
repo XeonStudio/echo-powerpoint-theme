@@ -4,6 +4,17 @@
 
 ---
 
+## [v1.4.1] - 2026-10-22
+
+### 缺陷修复与挂载稳定性 (Fixed & Stability)
+- **彻底根治 ECHO 宿主内工坊主题未能按预期挂载与超时卸载问题 (Host UI Runtime Mounting Fix)**：
+  - 修复 `setupListeners` 中 HUD 控制条事件绑定时直接引用未声明函数（`handlePrev`、`handlePlayPause`、`handleNext`）引发的 `ReferenceError: Cannot access 'handlePrev' before initialization` 暂时性死区（TDZ）错误。
+  - 将 HUD 控件回调全部包裹为惰性闭包函数，并在各主要初始化模块周围加入安全 `try / catch` 异常隔离保护。
+  - 提前消息分发器 `initMessageDispatcher` 至初始化流程最前序，确保页面 DOM 加载第一时间向 ECHO 宿主发出 `echo:workshop-ui:ready` 就绪信号并即时响应心跳 `ping/pong`。
+  - 消除因握手信号缺失导致宿主 `data-ready` 滞留为 `false` 并触发 10 秒超时强制卸载的缺陷，恢复全屏与歌词页面的无缝秒级稳定挂载。
+
+---
+
 ## [v1.4.0] - 2026-10-22
 
 ### 新增功能 (Added)

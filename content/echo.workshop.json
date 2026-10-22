@@ -15,12 +15,12 @@
     {
       "path": "echo.mod.json",
       "size": 218,
-      "sha256": "269d21775572dc737c15a7702eceae3e3009fa1532c663f955005dae08f7206f"
+      "sha256": "f77453923762f7b393011b8e8833f7fb07ac1a276bef916b48f5c7163f7fa70a"
     },
     {
       "path": "mod.js",
-      "size": 41965,
-      "sha256": "88a52808beebc86d34df73825df9f5b1ef5facc9ca232146b777a21a06a5a4f4"
+      "size": 42470,
+      "sha256": "26cb8807128944af3415d73e0b66b2cb91181d06c73b41f5baeca880e4669623"
     },
     {
       "path": "theme.json",
@@ -29,18 +29,18 @@
     },
     {
       "path": "ui/app.css",
-      "size": 60502,
-      "sha256": "369c6e9261a372989cbff7e7c497caaccb1b40d2d7e95008a5f5f80aa3dff614"
+      "size": 63337,
+      "sha256": "38cdb7a034fc1c5a9ff74bf12075d676d23a8e776c8ec0040f9de071b3a03ef5"
     },
     {
       "path": "ui/app.js",
-      "size": 220484,
-      "sha256": "6562072fcf388b8f4beeda2484636460725d363806a0c1ffbcab84cc40da78a1"
+      "size": 224543,
+      "sha256": "4d755e97cd8716c08525f4e631af2db071dbaafac9a0dd93ad455ab36b70f6df"
     },
     {
       "path": "ui/index.html",
       "size": 161477,
-      "sha256": "7696477527fd707d4b5f22d3016bea30b01dd6065a5ebff37f8df774b8014ae5"
+      "sha256": "0959c6a0e77091e944452cfb0937dc1f145fc498d08af9d4d1382b61d072578b"
     }
   ],
   "license": {

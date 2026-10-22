@@ -56,6 +56,7 @@ const allowedRootEntries = new Set([
   '.gitignore',
   'CHANGELOG.md',
   'LICENSE',
+  'MEMO.md',
   'content',
   'dist',
   'echo.mod.json',

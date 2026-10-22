@@ -1124,7 +1124,9 @@
         autoSave: els.chkAutosave ? els.chkAutosave.checked : true,
         lang: state.currentLang || 'zh-CN'
       };
-      safeStorageSet(PRESET_SETTINGS_KEY, JSON.stringify(preset));
+      const jsonStr = JSON.stringify(preset);
+      safeStorageSet(PRESET_SETTINGS_KEY, jsonStr);
+      sendHostCommand('storage:set', { key: PRESET_SETTINGS_KEY, value: jsonStr });
       sendModBridge('echo:powerpoint:savePreset', { preset });
     } catch {}
   }
@@ -1550,21 +1552,9 @@
       if (els.slideBgCover && els.slideBgCover.style.backgroundImage !== nextBg) {
         els.slideBgCover.style.backgroundImage = nextBg;
       }
-      // Also sync active left thumbnail immediately with cover art
-      const activeCard = document.querySelector('.slide-thumbnail-item.active .slide-card');
-      if (activeCard) {
-        let img = activeCard.querySelector('img.thumb-slide-bg');
-        if (!img) {
-          img = document.createElement('img');
-          img.className = 'thumb-slide-bg';
-          img.alt = '';
-          activeCard.insertBefore(img, activeCard.firstChild);
-          const placeholder = activeCard.querySelector('.thumb-placeholder');
-          if (placeholder) placeholder.remove();
-        }
-        if (img.getAttribute('src') !== url) {
-          img.src = url;
-        }
+      // Only sync the slide thumbnail that matches the exact track currently being updated
+      if (effTrackId) {
+        updateThumbnailCardCover(effTrackId, state.queue.currentQueueId, null, url);
       }
       if (preImg.naturalWidth > 0) {
         extractVibrantThemeColorsFromImage(preImg, url);
@@ -2017,7 +2007,7 @@
     }
   }
 
-  function syncLyricsWithTime(currentMs) {
+  function syncLyricsWithTime(currentMs, force = false) {
     const lines = state.lyrics.lines;
     if (!lines || lines.length === 0) return;
 
@@ -2030,7 +2020,7 @@
       }
     }
 
-    if (activeIdx !== state.lyrics.currentIndex && activeIdx >= 0) {
+    if ((activeIdx !== state.lyrics.currentIndex || force) && activeIdx >= 0) {
       state.lyrics.currentIndex = activeIdx;
       updateLyricWordStats(activeIdx);
       const curLayout = state.settings.slideLayout || 'ppt-vinyl';
@@ -2091,6 +2081,15 @@
         }
       }
     }
+  }
+
+  function centerActiveLyric(force = true) {
+    const lines = state.lyrics.lines;
+    const curMs = (state.playback.positionSeconds || 0) * 1000;
+    if (lines && lines.length > 0) {
+      syncLyricsWithTime(curMs, true);
+    }
+    showToast(t('pointerCentered') || '播放指针已居中定位');
   }
 
   // --- Left Slide Thumbnails Playlist Queue ---
@@ -2246,7 +2245,7 @@
     if (!coverSrc) {
       if (rawCover.startsWith('data:') || rawCover.startsWith('echo-cover:')) {
         coverSrc = rawCover;
-      } else if (isActive && state.currentCoverUrl) {
+      } else if (isActive && state.currentCoverUrl && (trackId && (state.currentTrack?.id === trackId || state.playback?.currentTrackId === trackId))) {
         coverSrc = state.currentCoverUrl;
       }
     }
@@ -2367,9 +2366,61 @@
     }
   }
 
+  // --- Universal Robust Clipboard Helper ---
+  async function copyToClipboard(text, successToastMsg) {
+    if (!text) {
+      showToast('暂无内容可复制');
+      return false;
+    }
+    let copied = false;
+    try {
+      window.focus();
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(text);
+        copied = true;
+      }
+    } catch {}
+
+    if (!copied) {
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        textarea.style.top = '0';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        copied = document.execCommand('copy');
+        document.body.removeChild(textarea);
+      } catch {}
+    }
+
+    try {
+      sendModBridge('echo:powerpoint:copyText', { text });
+    } catch {}
+
+    if (successToastMsg) {
+      showToast(successToastMsg);
+    }
+    return copied;
+  }
+
   // --- Search Functionality (Alt+Q) ---
   function initSearch() {
     if (!els.searchInput) return;
+
+    if (els.searchWrap) {
+      els.searchWrap.addEventListener('click', (e) => {
+        if (els.btnSearchClear && (e.target === els.btnSearchClear || els.btnSearchClear.contains(e.target))) {
+          return;
+        }
+        if (els.searchInput) {
+          els.searchInput.focus();
+        }
+      });
+    }
 
     function doSearch(query) {
       query = (query || '').trim().toLowerCase();
@@ -3043,7 +3094,9 @@
         textAlign: state.settings.lyricsTextAlign || 'center',
         lineHeight: els.selLineHeight ? els.selLineHeight.value : '1.4'
       };
-      safeStorageSet(LYRICS_FONT_STORAGE_KEY, JSON.stringify(settings));
+      const jsonStr = JSON.stringify(settings);
+      safeStorageSet(LYRICS_FONT_STORAGE_KEY, jsonStr);
+      sendHostCommand('storage:set', { key: LYRICS_FONT_STORAGE_KEY, value: jsonStr });
       sendModBridge('echo:powerpoint:saveLyricsFont', { fontSettings: settings });
       savePresetSettings();
     } catch {}
@@ -3166,13 +3219,13 @@
     if (els.btnCopyTitle) {
       els.btnCopyTitle.addEventListener('click', () => {
         const txt = `${state.currentTrack?.title || ''} - ${state.currentTrack?.artist || ''}`;
-        navigator.clipboard.writeText(txt).then(() => showToast('已复制歌曲名称到剪贴板'));
+        copyToClipboard(txt, '已复制歌曲名称到剪贴板');
       });
     }
     if (els.btnCopyLyrics) {
       els.btnCopyLyrics.addEventListener('click', () => {
         const txt = state.lyrics.lines.map(l => l.text).join('\n');
-        navigator.clipboard.writeText(txt).then(() => showToast('已复制全部歌词到剪贴板'));
+        copyToClipboard(txt, '已复制全部歌词到剪贴板');
       });
     }
     if (els.btnNextSlide) els.btnNextSlide.addEventListener('click', () => sendHostCommand('next'));
@@ -3372,25 +3425,25 @@
     // 4. Edit Panel Controls
     if (els.btnEditCopyTitle) {
       els.btnEditCopyTitle.addEventListener('click', () => {
-        navigator.clipboard.writeText(state.currentTrack?.title || '').then(() => showToast('已复制歌名到剪贴板'));
+        copyToClipboard(state.currentTrack?.title || '', `已复制歌名到剪贴板: ${state.currentTrack?.title || ''}`);
       });
     }
     if (els.btnEditCopyArtist) {
       els.btnEditCopyArtist.addEventListener('click', () => {
-        navigator.clipboard.writeText(state.currentTrack?.artist || '').then(() => showToast('已复制歌手到剪贴板'));
+        copyToClipboard(state.currentTrack?.artist || '', `已复制歌手到剪贴板: ${state.currentTrack?.artist || ''}`);
       });
     }
     if (els.btnEditCopyMeta) {
       els.btnEditCopyMeta.addEventListener('click', () => {
         const json = JSON.stringify(state.currentTrack || {}, null, 2);
-        navigator.clipboard.writeText(json).then(() => showToast('已复制元数据 JSON 到剪贴板'));
+        copyToClipboard(json, '已复制元数据 JSON 到剪贴板');
       });
     }
     if (els.btnEditCopyTimecode) {
       els.btnEditCopyTimecode.addEventListener('click', () => {
         const cur = formatSeconds(state.playback.positionSeconds);
         const dur = formatSeconds(state.playback.durationSeconds);
-        navigator.clipboard.writeText(`${cur} / ${dur}`).then(() => showToast(`已复制时间码: ${cur} / ${dur}`));
+        copyToClipboard(`${cur} / ${dur}`, `已复制时间码: ${cur} / ${dur}`);
       });
     }
     if (els.btnEditResetPeak) {
@@ -3442,8 +3495,7 @@
 
     if (els.btnClipCenter) {
       els.btnClipCenter.addEventListener('click', () => {
-        syncLyricsWithTime(state.playback.positionSeconds * 1000);
-        showToast(t('pointerCentered') || '播放指针已居中定位');
+        centerActiveLyric(true);
       });
     }
     if (els.btnClipStart) {
@@ -3856,8 +3908,8 @@
 
     // Global Keybindings
     window.addEventListener('keydown', (e) => {
-      // Alt+Q: Search
-      if (e.altKey && (e.key === 'q' || e.key === 'Q')) {
+      // Alt+Q or Ctrl+F: Search
+      if ((e.altKey && (e.key === 'q' || e.key === 'Q')) || (e.ctrlKey && (e.key === 'f' || e.key === 'F'))) {
         e.preventDefault();
         if (els.searchInput) {
           els.searchInput.focus();
@@ -4074,11 +4126,51 @@
   }
 
   // --- Local & System Font Access ---
+  function detectInstalledSystemFonts() {
+    const candidateFonts = [
+      'Microsoft YaHei', 'Microsoft YaHei UI', 'SimHei', 'SimSun', 'NSimSun', 'KaiTi', 'FangSong',
+      'DengXian', 'YouYuan', 'STXihei', 'STKaiti', 'STSong', 'STFangsong',
+      'Segoe UI', 'Segoe UI Variable', 'Segoe UI Semibold', 'Arial', 'Calibri', 'Consolas',
+      'Courier New', 'Times New Roman', 'Georgia', 'Verdana', 'Tahoma', 'Trebuchet MS',
+      'Impact', 'Comic Sans MS', 'Cascadia Code', 'Cascadia Mono',
+      'Source Han Sans SC', 'Source Han Serif SC', 'Noto Sans SC', 'Noto Serif SC',
+      'PingFang SC', 'Hiragino Sans GB', 'HarmonyOS Sans SC', 'MiSans', 'Fira Code', 'JetBrains Mono'
+    ];
+    try {
+      const testString = 'mmmmmmmmmmlliWWWWWWWW1234567890\u4e00\u4e8c\u4e09\u6c49\u5b57\u6d4b\u8bd5';
+      const baseFonts = ['monospace', 'sans-serif', 'serif'];
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return candidateFonts.slice(0, 12);
+      const baseWidths = {};
+      baseFonts.forEach(baseFont => {
+        ctx.font = `72px ${baseFont}`;
+        baseWidths[baseFont] = ctx.measureText(testString).width;
+      });
+
+      const installed = [];
+      candidateFonts.forEach(fontName => {
+        const isPresent = baseFonts.some(baseFont => {
+          ctx.font = `72px "${fontName}", ${baseFont}`;
+          return ctx.measureText(testString).width !== baseWidths[baseFont];
+        });
+        if (isPresent) installed.push(fontName);
+      });
+      return installed;
+    } catch {
+      return candidateFonts.slice(0, 10);
+    }
+  }
+
   function initSystemFonts() {
+    const detected = detectInstalledSystemFonts();
+    if (detected && detected.length > 0) {
+      populateFontSelector(detected);
+    }
     sendModBridge('echo:powerpoint:getSystemFonts');
     if (typeof window.queryLocalFonts === 'function') {
       window.queryLocalFonts().then(fonts => {
-        const set = new Set();
+        const set = new Set(detected);
         fonts.forEach(f => { if (f.family) set.add(f.family); });
         populateFontSelector(Array.from(set).sort());
       }).catch(() => {});
@@ -4145,11 +4237,39 @@
     initSystemFonts();
     initMessageDispatcher();
 
-    // Restore full user preset memory (tone, layout, tab, zoom, sliders, toggles, font)
+    // 1. Synchronous Cache Restore
     loadAndApplyPresetSettings();
     loadAndApplyLyricsFontSettings();
+
+    // 2. Workshop Native Host Persistent Storage
+    requestHostCommand('storage:get', { key: PRESET_SETTINGS_KEY }).then(res => {
+      const val = res?.result ?? res?.data?.value ?? res?.value;
+      if (val) {
+        try {
+          const p = typeof val === 'string' ? JSON.parse(val) : val;
+          if (p && typeof p === 'object') {
+            loadAndApplyPresetSettings(p);
+            isPresetLoaded = true;
+          }
+        } catch {}
+      }
+    }).catch(() => {});
+
+    requestHostCommand('storage:get', { key: LYRICS_FONT_STORAGE_KEY }).then(res => {
+      const val = res?.result ?? res?.data?.value ?? res?.value;
+      if (val) {
+        try {
+          const f = typeof val === 'string' ? JSON.parse(val) : val;
+          if (f && typeof f === 'object') {
+            loadAndApplyLyricsFontSettings(f);
+          }
+        } catch {}
+      }
+    }).catch(() => {});
+
+    // 3. Mod Bridge Redundant Restore
     sendModBridge('echo:powerpoint:getPreset');
-    setTimeout(() => { isPresetLoaded = true; }, 1500);
+    setTimeout(() => { isPresetLoaded = true; }, 1200);
 
     // Default mock data when running standalone
     setTimeout(() => {

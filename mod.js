@@ -19,16 +19,20 @@
       style.textContent = `
         /* 仅在工坊全屏歌词模式下穿透宿主原生标题栏及品牌层，防止吞噬中间搜索框与右上角按钮点击 */
         body:has(.workshop-ui-runtime) header.app-titlebar,
+        body:has(.workshop-ui-runtime--lyrics) header.app-titlebar,
         body:has(.workshop-lyrics-runtime-target:not(:empty)) header.app-titlebar,
         body:has(iframe[src*="echo.powerpoint-theme"]) header.app-titlebar,
-        body:has(iframe.workshop-ui-runtime__frame) header.app-titlebar {
+        body:has(iframe.workshop-ui-runtime__frame) header.app-titlebar,
+        body:has(.workshop-plugin-runtimes iframe) header.app-titlebar {
           pointer-events: none !important;
           -webkit-app-region: no-drag !important;
         }
         body:has(.workshop-ui-runtime) .app-titlebar-brand,
+        body:has(.workshop-ui-runtime--lyrics) .app-titlebar-brand,
         body:has(.workshop-lyrics-runtime-target:not(:empty)) .app-titlebar-brand,
         body:has(iframe[src*="echo.powerpoint-theme"]) .app-titlebar-brand,
-        body:has(iframe.workshop-ui-runtime__frame) .app-titlebar-brand {
+        body:has(iframe.workshop-ui-runtime__frame) .app-titlebar-brand,
+        body:has(.workshop-plugin-runtimes iframe) .app-titlebar-brand {
           pointer-events: none !important;
           -webkit-app-region: no-drag !important;
         }
@@ -723,6 +727,14 @@
 
     if (type === 'echo:powerpoint:getQueue' || type === 'echo:audition:getQueue') {
       broadcastQueue(true);
+    }
+
+    if (type === 'echo:powerpoint:copyText' && e.data?.text) {
+      try {
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(e.data.text).catch(() => {});
+        }
+      } catch {}
     }
 
     // Read installed system fonts

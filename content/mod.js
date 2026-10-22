@@ -953,6 +953,18 @@
             await q.playTrack(tracks[0].id);
           }
         }
+        // Broadcast resolved items to iframe for fallback/direct ingestion
+        const iframes = document.querySelectorAll('iframe.workshop-ui-runtime__frame, iframe');
+        for (const frame of iframes) {
+          try {
+            frame.contentWindow?.postMessage({
+              type: 'echo:powerpoint:importTracksResult',
+              playlistId,
+              mode,
+              tracks: tracks.map((t, idx) => unwrapTrackObject(t, idx))
+            }, '*');
+          } catch {}
+        }
         setTimeout(() => broadcastQueue(true), 120);
       } catch {}
     }
@@ -994,8 +1006,56 @@
             await q.playTrack(tracks[0].id);
           }
         }
+        // Broadcast resolved items to iframe for fallback/direct ingestion
+        const iframes = document.querySelectorAll('iframe.workshop-ui-runtime__frame, iframe');
+        for (const frame of iframes) {
+          try {
+            frame.contentWindow?.postMessage({
+              type: 'echo:powerpoint:importTracksResult',
+              albumId,
+              mode,
+              tracks: tracks.map((t, idx) => unwrapTrackObject(t, idx))
+            }, '*');
+          } catch {}
+        }
         setTimeout(() => broadcastQueue(true), 120);
       } catch {}
+    }
+
+    // Toggle Host Window Fullscreen
+    if (type === 'echo:powerpoint:toggleFullscreen') {
+      try {
+        const force = e.data?.fullscreen;
+        const fsBtn = document.querySelector('.window-control--fullscreen');
+        if (fsBtn) {
+          const isFs = fsBtn.getAttribute('data-fullscreen') === 'true' || fsBtn.getAttribute('aria-pressed') === 'true';
+          if (force === undefined || force !== isFs) {
+            fsBtn.click();
+          }
+        }
+      } catch {}
+    }
+
+    // Global Library Search Bridge
+    if (type === 'echo:powerpoint:searchTracks') {
+      const query = (e.data?.query || '').trim();
+      let tracks = [];
+      if (query) {
+        try {
+          const res = await window.echo?.library?.getTracks?.({ search: query, pageSize: 40 });
+          tracks = Array.isArray(res?.items) ? res.items : (Array.isArray(res?.tracks) ? res.tracks : []);
+        } catch {}
+      }
+      const iframes = document.querySelectorAll('iframe.workshop-ui-runtime__frame, iframe');
+      for (const frame of iframes) {
+        try {
+          frame.contentWindow?.postMessage({
+            type: 'echo:powerpoint:searchResults',
+            query,
+            tracks: tracks.map((t, idx) => unwrapTrackObject(t, idx))
+          }, '*');
+        } catch {}
+      }
     }
 
     // VST3 Integration

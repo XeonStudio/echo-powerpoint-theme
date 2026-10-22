@@ -233,6 +233,13 @@
     btnSbNotes: $('btn-sb-notes'),
     btnViewSlideshow: $('btn-view-slideshow'),
     rngZoom: $('rng-zoom'),
+
+    // Floating Slideshow HUD
+    slideshowHud: $('slideshow-hud'),
+    btnHudPrev: $('btn-hud-prev'),
+    btnHudPlay: $('btn-hud-play'),
+    btnHudNext: $('btn-hud-next'),
+    btnHudExit: $('btn-hud-exit'),
     lblZoom: $('lbl-zoom'),
     btnZoomIn: $('btn-zoom-in'),
     btnZoomOut: $('btn-zoom-out'),
@@ -1554,7 +1561,7 @@
       }
       // Only sync the slide thumbnail that matches the exact track currently being updated
       if (effTrackId) {
-        updateThumbnailCardCover(effTrackId, state.queue.currentQueueId, null, url);
+        updateThumbnailCardCover(effTrackId, null, null, url);
       }
       if (preImg.naturalWidth > 0) {
         extractVibrantThemeColorsFromImage(preImg, url);
@@ -2325,9 +2332,14 @@
     if (!els.thumbnailsList || !coverDataUrl) return;
     const items = state.queue.items || [];
     items.forEach((it, idx) => {
-      const match = (trackId && (it.id === trackId || it.track?.id === trackId)) ||
-                    (queueId && it.queueId === queueId) ||
-                    (rawUrl && (it.rawCoverUrl === rawUrl || it.coverThumb === rawUrl || it.coverUrl === rawUrl));
+      let match = false;
+      if (trackId) {
+        match = (it.id === trackId || it.track?.id === trackId);
+      } else if (queueId) {
+        match = (it.queueId === queueId);
+      } else if (rawUrl) {
+        match = (it.rawCoverUrl === rawUrl || it.coverThumb === rawUrl || it.coverUrl === rawUrl);
+      }
       if (match) {
         it.coverThumb = coverDataUrl;
         const cardItem = els.thumbnailsList.querySelector(`.slide-thumbnail-item[data-index="${idx}"]`);
@@ -2462,6 +2474,41 @@
       });
 
       renderSearchResults(matched, query);
+
+      // Trigger Host Full Library Search Bridge
+      sendModBridge('echo:powerpoint:searchTracks', { query });
+    }
+
+    function mergeGlobalSearchResults(globalTracks, query) {
+      if (!query || !els.searchInput || els.searchInput.value.trim().toLowerCase() !== query.toLowerCase()) return;
+      const queueItems = state.queue.items || [];
+      const seen = new Set();
+      const combined = [];
+
+      // 1. Current Queue Matches First
+      for (const it of queueItems) {
+        const id = it.id || it.track?.id;
+        if (id && !seen.has(id)) {
+          const t = (it.title || it.track?.title || '').toLowerCase();
+          const a = (it.artist || it.track?.artist || '').toLowerCase();
+          const alb = (it.album || it.track?.album || '').toLowerCase();
+          if (t.includes(query) || a.includes(query) || alb.includes(query)) {
+            seen.add(id);
+            combined.push({ ...it, fromQueue: true });
+          }
+        }
+      }
+
+      // 2. Global Library Matches
+      for (const it of (globalTracks || [])) {
+        const id = it.id || it.track?.id;
+        if (id && !seen.has(id)) {
+          seen.add(id);
+          combined.push({ ...it, fromQueue: false });
+        }
+      }
+
+      renderSearchResults(combined, query);
     }
 
     function renderSearchResults(results, query) {
@@ -2477,7 +2524,7 @@
         return;
       }
 
-      results.slice(0, 10).forEach((item, idx) => {
+      results.slice(0, 15).forEach((item, idx) => {
         const row = document.createElement('div');
         row.className = 'search-item';
         row.dataset.trackId = item.id || item.track?.id;
@@ -2496,8 +2543,8 @@
         tDiv.textContent = item.title || item.track?.title || '曲目';
 
         const badge = document.createElement('span');
-        badge.className = 'search-result-badge';
-        badge.textContent = item.fromQueue ? (t('badgeQueue') || '当前队列') : (t('badgeLibrary') || '本地曲库');
+        badge.className = 'search-result-badge' + (item.fromQueue ? ' badge-queue' : '');
+        badge.textContent = item.fromQueue ? (t('badgeQueue') || '当前队列') : (t('badgeLibrary') || '全曲库');
         tDiv.appendChild(badge);
 
         info.appendChild(tDiv);
@@ -2517,9 +2564,14 @@
         row.addEventListener('click', () => {
           const trackId = item.id || item.track?.id;
           const queueId = item.queueId;
+          if (item.fromQueue && queueId && !String(queueId).startsWith('q_')) {
+            sendHostCommand('queue:playItem', { queueId });
+          } else if (trackId) {
+            sendHostCommand('queue:playTrack', { trackId });
+          }
           sendModBridge('echo:powerpoint:playTrack', { trackId, queueId });
           els.searchDropdown.hidden = true;
-          showToast(`${t('nowPlaying') || '正在播放'}: ${item.title || item.track?.title}`);
+          showToast(`${t('nowPlaying') || '正在播放'}: ${item.title || item.track?.title || ''}`);
         });
 
         els.searchResultsList.appendChild(row);
@@ -2575,12 +2627,28 @@
   }
 
   // --- Fullscreen Slideshow (F5) ---
-  function toggleSlideshow() {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
+  function toggleSlideshow(force) {
+    const isCurrentlySlideshow = document.body.classList.contains('slideshow-mode');
+    const willBeSlideshow = (typeof force === 'boolean') ? force : !isCurrentlySlideshow;
+
+    if (willBeSlideshow) {
+      document.body.classList.add('slideshow-mode');
+      sendModBridge('echo:powerpoint:toggleFullscreen', { fullscreen: true });
+      try {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      } catch {}
       showToast('已开启 PowerPoint 全屏放映模式 (按 Esc 退出)');
     } else {
-      document.exitFullscreen().catch(() => {});
+      document.body.classList.remove('slideshow-mode');
+      sendModBridge('echo:powerpoint:toggleFullscreen', { fullscreen: false });
+      try {
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        }
+      } catch {}
+      showToast('已退出全屏放映模式');
     }
   }
 
@@ -2884,10 +2952,22 @@
         // Import actions
         const btnPlay = header.querySelector('.btn-import-play');
         if (btnPlay) {
-          btnPlay.addEventListener('click', (ev) => {
+          btnPlay.addEventListener('click', async (ev) => {
             ev.stopPropagation();
             if (!String(alb.id).startsWith('synth_alb_')) {
               sendHostCommand('queue:playAlbum', { albumId: alb.id });
+            }
+            let arr = state.albumCache.get(alb.id);
+            if (!arr || !arr.length) {
+              try {
+                const res = await requestHostCommand('library:listAlbumTracks', { albumId: alb.id, page: 1, pageSize: 200 });
+                const d = res?.result ?? res?.data ?? res;
+                arr = Array.isArray(d) ? d : (Array.isArray(d?.items) ? d.items : (Array.isArray(d?.tracks) ? d.tracks : []));
+                if (arr.length) state.albumCache.set(alb.id, arr);
+              } catch {}
+            }
+            if (arr && arr.length) {
+              playTrackList(arr);
             }
             sendModBridge('echo:powerpoint:importAlbum', { albumId: alb.id, mode: 'replace' });
             setTimeout(() => requestFullQueue(true), 350);
@@ -2897,8 +2977,20 @@
 
         const btnAppend = header.querySelector('.btn-import-append');
         if (btnAppend) {
-          btnAppend.addEventListener('click', (ev) => {
+          btnAppend.addEventListener('click', async (ev) => {
             ev.stopPropagation();
+            let arr = state.albumCache.get(alb.id);
+            if (!arr || !arr.length) {
+              try {
+                const res = await requestHostCommand('library:listAlbumTracks', { albumId: alb.id, page: 1, pageSize: 200 });
+                const d = res?.result ?? res?.data ?? res;
+                arr = Array.isArray(d) ? d : (Array.isArray(d?.items) ? d.items : (Array.isArray(d?.tracks) ? d.tracks : []));
+                if (arr.length) state.albumCache.set(alb.id, arr);
+              } catch {}
+            }
+            if (arr && arr.length) {
+              enqueueTrackList(arr);
+            }
             sendModBridge('echo:powerpoint:importAlbum', { albumId: alb.id, mode: 'append' });
             setTimeout(() => requestFullQueue(true), 350);
             showToast(`${t('toastAppended') || '已追加至队列'}: ${alb.title}`);
@@ -2963,9 +3055,21 @@
         // Import actions
         const btnPlay = header.querySelector('.btn-import-play');
         if (btnPlay) {
-          btnPlay.addEventListener('click', (ev) => {
+          btnPlay.addEventListener('click', async (ev) => {
             ev.stopPropagation();
             sendHostCommand('queue:playPlaylist', { playlistId: pl.id });
+            let arr = state.playlistCache.get(pl.id);
+            if (!arr || !arr.length) {
+              try {
+                const res = await requestHostCommand('library:listPlaylistItems', { playlistId: pl.id, page: 1, pageSize: 200 });
+                const d = res?.result ?? res?.data ?? res;
+                arr = Array.isArray(d) ? d : (Array.isArray(d?.items) ? d.items : []);
+                if (arr.length) state.playlistCache.set(pl.id, arr);
+              } catch {}
+            }
+            if (arr && arr.length) {
+              playTrackList(arr);
+            }
             sendModBridge('echo:powerpoint:importPlaylist', { playlistId: pl.id, mode: 'replace' });
             setTimeout(() => requestFullQueue(true), 350);
             showToast(`${t('toastImporting') || '正在导入歌单并播放'}: ${pl.name}`);
@@ -2974,8 +3078,20 @@
 
         const btnAppend = header.querySelector('.btn-import-append');
         if (btnAppend) {
-          btnAppend.addEventListener('click', (ev) => {
+          btnAppend.addEventListener('click', async (ev) => {
             ev.stopPropagation();
+            let arr = state.playlistCache.get(pl.id);
+            if (!arr || !arr.length) {
+              try {
+                const res = await requestHostCommand('library:listPlaylistItems', { playlistId: pl.id, page: 1, pageSize: 200 });
+                const d = res?.result ?? res?.data ?? res;
+                arr = Array.isArray(d) ? d : (Array.isArray(d?.items) ? d.items : []);
+                if (arr.length) state.playlistCache.set(pl.id, arr);
+              } catch {}
+            }
+            if (arr && arr.length) {
+              enqueueTrackList(arr);
+            }
             sendModBridge('echo:powerpoint:importPlaylist', { playlistId: pl.id, mode: 'append' });
             setTimeout(() => requestFullQueue(true), 350);
             showToast(`${t('toastAppended') || '已追加至队列'}: ${pl.name}`);
@@ -2986,6 +3102,29 @@
         node.appendChild(children);
         els.modalPlaylistsTree.appendChild(node);
       });
+    }
+  }
+
+  function enqueueTrackList(tracks) {
+    if (!Array.isArray(tracks) || tracks.length === 0) return;
+    tracks.forEach(raw => {
+      const tr = (raw && raw.track && typeof raw.track === 'object') ? raw.track : raw;
+      const tid = tr?.id || raw?.id || raw?.trackId;
+      if (tid) sendHostCommand('queue:enqueueTrack', { trackId: tid });
+    });
+  }
+
+  function playTrackList(tracks) {
+    if (!Array.isArray(tracks) || tracks.length === 0) return;
+    const first = (tracks[0] && tracks[0].track && typeof tracks[0].track === 'object') ? tracks[0].track : tracks[0];
+    const firstId = first?.id || tracks[0]?.id || tracks[0]?.trackId;
+    if (firstId) {
+      sendHostCommand('queue:playTrack', { trackId: firstId });
+    }
+    for (let i = 1; i < tracks.length; i++) {
+      const tr = (tracks[i] && tracks[i].track && typeof tracks[i].track === 'object') ? tracks[i].track : tracks[i];
+      const tid = tr?.id || tracks[i]?.id || tracks[i]?.trackId;
+      if (tid) sendHostCommand('queue:enqueueTrack', { trackId: tid });
     }
   }
 
@@ -3211,9 +3350,13 @@
     if (els.btnQaSave) els.btnQaSave.addEventListener('click', () => showToast('演示文稿已自动保存至本地缓存'));
     if (els.btnQaUndo) els.btnQaUndo.addEventListener('click', () => showToast('已撤消上一步版式操作'));
     if (els.btnQaRedo) els.btnQaRedo.addEventListener('click', () => showToast('已恢复上一步版式操作'));
-    if (els.btnQaSlideshow) els.btnQaSlideshow.addEventListener('click', toggleSlideshow);
-    if (els.btnFullscreenShow) els.btnFullscreenShow.addEventListener('click', toggleSlideshow);
-    if (els.btnViewSlideshow) els.btnViewSlideshow.addEventListener('click', toggleSlideshow);
+    if (els.btnQaSlideshow) els.btnQaSlideshow.addEventListener('click', () => toggleSlideshow());
+    if (els.btnFullscreenShow) els.btnFullscreenShow.addEventListener('click', () => toggleSlideshow());
+    if (els.btnViewSlideshow) els.btnViewSlideshow.addEventListener('click', () => toggleSlideshow());
+    if (els.btnHudPrev) els.btnHudPrev.addEventListener('click', handlePrev);
+    if (els.btnHudPlay) els.btnHudPlay.addEventListener('click', handlePlayPause);
+    if (els.btnHudNext) els.btnHudNext.addEventListener('click', handleNext);
+    if (els.btnHudExit) els.btnHudExit.addEventListener('click', () => toggleSlideshow(false));
 
     // 3. Home Panel Controls
     if (els.btnCopyTitle) {
@@ -3258,6 +3401,32 @@
     // Font family, size, styles
     if (els.selLyricsFont) {
       els.selLyricsFont.addEventListener('change', (e) => {
+        if (e.target.value === '__custom__') {
+          const font = prompt('请输入您在 Windows 系统中安装的字体名称 (如 LXGW WenKai, OPPO Sans 等):');
+          if (font && font.trim()) {
+            const fontName = font.trim();
+            const val = `'${fontName}', sans-serif`;
+            const opt = document.createElement('option');
+            opt.value = val;
+            opt.textContent = fontName;
+            let group = els.selLyricsFont.querySelector('optgroup[data-group="custom"]');
+            if (!group) {
+              group = document.createElement('optgroup');
+              group.dataset.group = 'custom';
+              group.label = '自定义系统字体';
+              els.selLyricsFont.appendChild(group);
+            }
+            group.appendChild(opt);
+            els.selLyricsFont.value = val;
+            document.documentElement.style.setProperty('--lyrics-font-family', val);
+            saveLyricsFontSettings();
+            showToast(`已应用自定义字体: ${fontName}`);
+            return;
+          } else {
+            loadAndApplyLyricsFontSettings();
+            return;
+          }
+        }
         document.documentElement.style.setProperty('--lyrics-font-family', e.target.value);
         saveLyricsFontSettings();
         showToast(`已更换歌词字体: ${e.target.options[e.target.selectedIndex].text}`);
@@ -3923,7 +4092,13 @@
         return;
       }
 
-      if (e.code === 'Space') {
+      if (e.code === 'Escape') {
+        if (document.body.classList.contains('slideshow-mode')) {
+          e.preventDefault();
+          toggleSlideshow(false);
+          return;
+        }
+      } else if (e.code === 'Space') {
         e.preventDefault();
         handlePlayPause();
       } else if (e.code === 'F5') {
@@ -4084,6 +4259,25 @@
           }
           break;
 
+        case 'echo:powerpoint:searchResults':
+          if (Array.isArray(msg.tracks) && els.searchInput && els.searchInput.value.trim().toLowerCase() === (msg.query || '').trim().toLowerCase()) {
+            mergeGlobalSearchResults(msg.tracks, msg.query);
+          }
+          break;
+
+        case 'echo:powerpoint:importTracksResult':
+          if (Array.isArray(msg.tracks) && msg.tracks.length > 0) {
+            if (msg.playlistId) state.playlistCache.set(msg.playlistId, msg.tracks);
+            if (msg.albumId) state.albumCache.set(msg.albumId, msg.tracks);
+            if (msg.mode === 'append') {
+              msg.tracks.forEach(tr => {
+                const trId = tr.id || tr.track?.id;
+                if (trId) sendHostCommand('queue:enqueueTrack', { trackId: trId });
+              });
+            }
+          }
+          break;
+
         case 'echo:powerpoint:setLayout':
           if (msg.layout) setSlideLayout(msg.layout);
           break;
@@ -4128,20 +4322,35 @@
   // --- Local & System Font Access ---
   function detectInstalledSystemFonts() {
     const candidateFonts = [
-      'Microsoft YaHei', 'Microsoft YaHei UI', 'SimHei', 'SimSun', 'NSimSun', 'KaiTi', 'FangSong',
-      'DengXian', 'YouYuan', 'STXihei', 'STKaiti', 'STSong', 'STFangsong',
-      'Segoe UI', 'Segoe UI Variable', 'Segoe UI Semibold', 'Arial', 'Calibri', 'Consolas',
-      'Courier New', 'Times New Roman', 'Georgia', 'Verdana', 'Tahoma', 'Trebuchet MS',
-      'Impact', 'Comic Sans MS', 'Cascadia Code', 'Cascadia Mono',
-      'Source Han Sans SC', 'Source Han Serif SC', 'Noto Sans SC', 'Noto Serif SC',
-      'PingFang SC', 'Hiragino Sans GB', 'HarmonyOS Sans SC', 'MiSans', 'Fira Code', 'JetBrains Mono'
+      // Windows 基础中文字体
+      'Microsoft YaHei', 'Microsoft YaHei UI', 'Microsoft YaHei Light',
+      'SimSun', 'NSimSun', 'SimHei', 'KaiTi', 'FangSong', 'DengXian', 'DengXian Light', 'YouYuan',
+      // 华文经典字体
+      'STXihei', 'STKaiti', 'STSong', 'STFangsong', 'STZhongsong', 'STHupo', 'STXinwei', 'STLiti', 'STXingkai', 'STCaiyun',
+      // 方正与汉仪
+      'FZShuSong-Z01', 'FZKai-Z03', 'FZHei-B01', 'FZFangSong-Z02',
+      // Windows / Office 常用西文字体
+      'Segoe UI', 'Segoe UI Variable', 'Segoe UI Variable Text', 'Segoe UI Variable Display', 'Segoe UI Semibold', 'Segoe UI Light',
+      'Arial', 'Arial Black', 'Calibri', 'Calibri Light', 'Cambria', 'Cambria Math', 'Candara', 'Corbel', 'Constantia',
+      'Aptos', 'Aptos Display',
+      // 等宽与编程代码字体
+      'Consolas', 'Courier New', 'Cascadia Code', 'Cascadia Mono', 'Fira Code', 'JetBrains Mono', 'Source Code Pro', 'Inconsolata', 'Lucida Console',
+      // 衬线经典印刷字体
+      'Times New Roman', 'Georgia', 'Garamond', 'Palatino Linotype', 'Book Antiqua', 'Baskerville',
+      // 无衬线现代字体
+      'Verdana', 'Tahoma', 'Trebuchet MS', 'Century Gothic', 'Franklin Gothic Medium', 'Impact', 'Comic Sans MS',
+      // 开源及移动端高质量字体
+      'Source Han Sans SC', 'Source Han Serif SC', 'Source Han Sans CN', 'Source Han Serif CN',
+      'Noto Sans SC', 'Noto Serif SC', 'Noto Sans CJK SC', 'Noto Serif CJK SC',
+      'PingFang SC', 'Hiragino Sans GB', 'HarmonyOS Sans SC', 'HarmonyOS Sans',
+      'MiSans', 'Alibaba PuHuiTi', 'Alibaba PuHuiTi 2.0', 'OPPO Sans', 'LXGW WenKai', 'LXGW Neo XiHei'
     ];
     try {
       const testString = 'mmmmmmmmmmlliWWWWWWWW1234567890\u4e00\u4e8c\u4e09\u6c49\u5b57\u6d4b\u8bd5';
       const baseFonts = ['monospace', 'sans-serif', 'serif'];
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      if (!ctx) return candidateFonts.slice(0, 12);
+      if (!ctx) return candidateFonts.slice(0, 16);
       const baseWidths = {};
       baseFonts.forEach(baseFont => {
         ctx.font = `72px ${baseFont}`;
@@ -4158,7 +4367,7 @@
       });
       return installed;
     } catch {
-      return candidateFonts.slice(0, 10);
+      return candidateFonts.slice(0, 12);
     }
   }
 
@@ -4213,7 +4422,7 @@
     els.selLyricsFont.appendChild(groupCurated);
 
     const groupSystem = document.createElement('optgroup');
-    groupSystem.label = t('fontGroupSystem') || '系统已安装字体';
+    groupSystem.label = `${t('fontGroupSystem') || '系统已安装字体'} (${fonts.length})`;
     fonts.forEach(name => {
       const opt = document.createElement('option');
       opt.value = `'${name}', sans-serif`;
@@ -4221,6 +4430,21 @@
       groupSystem.appendChild(opt);
     });
     els.selLyricsFont.appendChild(groupSystem);
+
+    const groupCustom = document.createElement('optgroup');
+    groupCustom.dataset.group = 'custom';
+    groupCustom.label = '个性化与自定义字体';
+    if (savedVal && !curated.some(c => c.val === savedVal) && !fonts.some(f => `'${f}', sans-serif` === savedVal)) {
+      const customOpt = document.createElement('option');
+      customOpt.value = savedVal;
+      customOpt.textContent = savedVal.replace(/['",]/g, '').trim();
+      groupCustom.appendChild(customOpt);
+    }
+    const optAddCustom = document.createElement('option');
+    optAddCustom.value = '__custom__';
+    optAddCustom.textContent = '输入自定义系统字体...';
+    groupCustom.appendChild(optAddCustom);
+    els.selLyricsFont.appendChild(groupCustom);
 
     const targetVal = savedVal || currentVal;
     if (targetVal) {

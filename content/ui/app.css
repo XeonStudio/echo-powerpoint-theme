@@ -2817,3 +2817,99 @@ body.tone-dark .floating-vu-meter {
   font-weight: 600;
 }
 
+
+
+/* --- PowerPoint Slideshow Presentation Mode --- */
+body.slideshow-mode .app-header,
+body.slideshow-mode .ribbon-tabs,
+body.slideshow-mode .ribbon-body,
+body.slideshow-mode .app-sidebar,
+body.slideshow-mode .notes-pane,
+body.slideshow-mode .app-statusbar {
+  display: none !important;
+}
+
+body.slideshow-mode .main-content {
+  height: 100vh !important;
+  max-height: 100vh !important;
+}
+
+body.slideshow-mode .stage-area {
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: #000000 !important;
+}
+
+body.slideshow-mode .slide-container {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  aspect-ratio: auto !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.slideshow-hud {
+  position: fixed;
+  bottom: 18px;
+  left: 20px;
+  z-index: 99999;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  background: rgba(28, 28, 30, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  opacity: 0.35;
+  transition: opacity 0.25s ease;
+}
+
+body.slideshow-mode .slideshow-hud {
+  display: flex !important;
+}
+
+body.slideshow-mode .slideshow-hud:hover {
+  opacity: 1 !important;
+}
+
+.slideshow-hud-btn {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+
+.slideshow-hud-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.search-result-badge {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 6px;
+  background: rgba(196, 62, 28, 0.12);
+  color: #c43e1c;
+  font-weight: 500;
+  vertical-align: middle;
+}
+.search-result-badge.badge-queue {
+  background: rgba(0, 120, 212, 0.12);
+  color: #0078d4;
+}

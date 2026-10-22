@@ -6,7 +6,7 @@
 - **改动审计记录**：每一次版本迭代必须严格记录改动原因、变更代码范围并在 CHANGELOG.md 与 GitHub Release 中清晰阐述。
 
 ## 2. 语义化版本规范 (Semantic Versioning)
-- **版本号递增**：每次发布严格遵循 Semantic Versioning 规范（例如 v1.0.0 -> v1.1.0 -> v1.2.0 -> v1.3.0）。
+- **版本号递增**：每次发布严格遵循 Semantic Versioning 规范（例如 v1.0.0 -> v1.1.0 -> v1.2.0 -> v1.3.0 -> v1.4.0）。
 - **清单同步**：所有配置文件中的版本号必须保持完全一致：
   - `package.json`
   - `echo.workshop.project.json`
@@ -32,5 +32,5 @@
 
 ## 5. GitHub 远端同步与 Release 整合规范 (GitHub Releases Integration)
 - **远端仓库基准**：`https://github.com/XeonStudio/echo-powerpoint-theme.git`
-- **提交与打标**：最新构建经过自动化验证通过后，默认提交 Git Commit，生成对应版本的 Git Tag（如 `v1.3.0`），推送到 GitHub 远端。
+- **提交与打标**：最新构建经过自动化验证通过后，默认提交 Git Commit，生成对应版本的 Git Tag（如 `v1.4.0`），推送到 GitHub 远端。
 - **Release 整合发布**：在 GitHub 上整合详细更新日志，发布正式 Release 供用户下载与追溯。

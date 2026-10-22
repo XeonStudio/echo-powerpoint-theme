@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Builds & temporary release packages
+dist/
+build/
+*.zip
+*.tar.gz
+*.log
+
+# Temporary test & debug scripts
+scratch/
+test-*.js
+test-*.cjs
+check-*.js
+check-*.cjs
+
+# Operating System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo

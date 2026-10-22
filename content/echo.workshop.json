@@ -1,0 +1,50 @@
+{
+  "type": "echo-workshop-item",
+  "schemaVersion": 1,
+  "id": "echo.powerpoint-theme",
+  "title": "Microsoft PowerPoint · 演示文稿外观主题",
+  "version": "1.0.0",
+  "content": {
+    "kind": "theme",
+    "entry": "theme.json"
+  },
+  "compatibility": {
+    "minEchoVersion": "26.9.13"
+  },
+  "files": [
+    {
+      "path": "echo.mod.json",
+      "size": 218,
+      "sha256": "269d21775572dc737c15a7702eceae3e3009fa1532c663f955005dae08f7206f"
+    },
+    {
+      "path": "mod.js",
+      "size": 41965,
+      "sha256": "88a52808beebc86d34df73825df9f5b1ef5facc9ca232146b777a21a06a5a4f4"
+    },
+    {
+      "path": "theme.json",
+      "size": 2046,
+      "sha256": "600c366ad0796ff5ca7c838adb4af1d4e47e7bd8041d4869f46f8919070c6a20"
+    },
+    {
+      "path": "ui/app.css",
+      "size": 60502,
+      "sha256": "369c6e9261a372989cbff7e7c497caaccb1b40d2d7e95008a5f5f80aa3dff614"
+    },
+    {
+      "path": "ui/app.js",
+      "size": 220484,
+      "sha256": "6562072fcf388b8f4beeda2484636460725d363806a0c1ffbcab84cc40da78a1"
+    },
+    {
+      "path": "ui/index.html",
+      "size": 161477,
+      "sha256": "7696477527fd707d4b5f22d3016bea30b01dd6065a5ebff37f8df774b8014ae5"
+    }
+  ],
+  "license": {
+    "id": "MIT",
+    "holder": "Xeon"
+  }
+}

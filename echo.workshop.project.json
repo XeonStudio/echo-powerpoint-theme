@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "appId": "5105090",
+  "publishedFileId": "0",
+  "contentDirectory": "content",
+  "previewFile": "preview.png",
+  "visibility": "private",
+  "description": "Microsoft PowerPoint 演示文稿主题界面（ECHO 创意工坊外观）。完美复刻 Office PowerPoint 经典 Fluent Ribbon 界面设计，包含幻灯片缩略图播放队列、高精旋转黑胶唱片机、实时解码与音频硬件属性展示、支持功能区字体颜色自由排版的逐句同步歌词展示，以及底部演示备注式全功能播放控制器。",
+  "changeNote": "v1.2.0: 修复功能区图标排布高低错落问题，删除所有括号快捷键与解释性文字；新增预设记忆与自动恢复功能，支持跨会话记忆主题外观、Ribbon选项卡、幻灯片排版、缩放比例与视觉参数。",
+  "tags": [
+    "Theme"
+  ]
+}

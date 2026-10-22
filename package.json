@@ -1,0 +1,29 @@
+{
+  "name": "echo.powerpoint-theme",
+  "version": "1.2.0",
+  "description": "Microsoft PowerPoint Presentation Skin theme for ECHO Music Player Workshop",
+  "author": "XeonStudio <Victor7842@outlook.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/XeonStudio/echo-powerpoint-theme.git"
+  },
+  "keywords": [
+    "echo-player",
+    "echo-workshop",
+    "theme",
+    "powerpoint",
+    "office",
+    "fluent-ui",
+    "lyrics"
+  ],
+  "scripts": {
+    "sync": "node ./.echo-sdk/bin/echo-workshop-sdk.mjs sync .",
+    "check": "node ./.echo-sdk/bin/echo-workshop-sdk.mjs check .",
+    "quality": "node ./.echo-sdk/bin/echo-workshop-sdk.mjs quality .",
+    "test": "node ./.echo-sdk/bin/echo-workshop-sdk.mjs test .",
+    "inspect": "node ./.echo-sdk/bin/echo-workshop-sdk.mjs inspect .",
+    "explain": "node ./.echo-sdk/bin/echo-workshop-sdk.mjs explain .",
+    "dev": "node ./.echo-sdk/bin/echo-workshop-sdk.mjs dev ."
+  }
+}
